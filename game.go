@@ -134,11 +134,13 @@ func (g *GameState) BuyWorker(industryIndex, workerIndex int) string {
 func (g *GameState) UpgradeWorker(industryIndex, workerIndex int) string {
 	worker := &g.Industries[industryIndex].Workers[workerIndex]
 	cost := scaledCost(worker.Definition.Cost, worker.Definition.UpgradeMult, worker.Tier)
-	if !canAfford(cost, g.Resources) {
+	if !g.DevMode && !canAfford(cost, g.Resources) {
 		return "cannot afford upgrade"
 	}
-	for resource, amount := range cost {
-		g.Resources[resource] -= amount
+	if !g.DevMode {
+		for resource, amount := range cost {
+			g.Resources[resource] -= amount
+		}
 	}
 	worker.Tier++
 	if worker.Definition.AutoTier > 0 && worker.Tier >= worker.Definition.AutoTier {
