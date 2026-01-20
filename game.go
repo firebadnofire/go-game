@@ -108,6 +108,8 @@ func (g *GameState) BuyWorker(industryIndex, workerIndex int) string {
 	count := 1
 	if g.BuyModeMax {
 		count = maxAffordable(cost, g.Resources)
+	} else if !canAfford(cost, g.Resources) {
+		return "cannot afford"
 	}
 	if count <= 0 {
 		return "cannot afford"
