@@ -245,13 +245,15 @@ func (ui *UI) drawWorkers(x, y, width, height int) {
 }
 
 func (ui *UI) drawFooter(x, y, width int) {
-	controls := "a/d or ←/→ switch industry | w/s or ↑/↓ select worker | b buy | r run | q global run | u upgrade | m toggle buy mode | esc quit"
-	ui.drawText(x, y, truncate(controls, width-x-2), tcell.StyleDefault)
+	controlsTop := "a/d or ←/→ switch industry | w/s or ↑/↓ select worker | b buy"
+	controlsBottom := "r run | q global run | u upgrade | m toggle buy mode | esc quit"
+	ui.drawText(x, y-1, truncate(controlsTop, width-x-2), tcell.StyleDefault)
+	ui.drawText(x, y, truncate(controlsBottom, width-x-2), tcell.StyleDefault)
 	status := ui.statusMessage
 	if time.Since(ui.lastStatusAt) > 5*time.Second {
 		status = ui.buyModeLabel()
 	}
-	ui.drawText(x, y-1, truncate(status, width-x-2), tcell.StyleDefault.Foreground(tcell.ColorGreen))
+	ui.drawText(x, y-2, truncate(status, width-x-2), tcell.StyleDefault.Foreground(tcell.ColorGreen))
 }
 
 func (ui *UI) setStatus(message string) {
