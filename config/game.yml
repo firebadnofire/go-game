@@ -1,0 +1,38 @@
+startingResources:
+  coins: 200
+industry:
+  - industry: industry1
+    name: Coal Production
+    resource: coal
+    workers:
+      - worker: worker1
+        workerName: Miner
+        produces: coal
+        prodRate: 1s
+        prodQuant: 25
+        upgradeMult: 1.5
+        autoTier: 2
+        cost:
+          coins: 25
+      - worker: worker2
+        workerName: Driller
+        produces: worker1
+        prodRate: 5s
+        prodQuant: 50
+        upgradeMult: 1.7
+        autoTier: 3
+        cost:
+          coins: 150
+  - industry: industry2
+    name: Smelting
+    resource: ingot
+    workers:
+      - worker: worker1
+        workerName: Smelter
+        produces: ingot
+        prodRate: 2s
+        prodQuant: 10
+        upgradeMult: 1.4
+        autoTier: 2
+        cost:
+          coal: 50
