@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	minWidth  = 135
-	minHeight = 35
+	minWidth  = 85
+	minHeight = 22
 )
 
 type UI struct {
