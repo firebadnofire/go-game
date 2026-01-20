@@ -13,15 +13,13 @@ const (
 )
 
 type UI struct {
-	screen          tcell.Screen
-	game            *GameState
-	activeIndustry  int
-	selectedWorker  int
-	statusMessage   string
-	lastStatusAt    time.Time
-	workerScroll    int
-	industryScroll  int
-	lastScreenWidth int
+	screen         tcell.Screen
+	game           *GameState
+	activeIndustry int
+	selectedWorker int
+	statusMessage  string
+	lastStatusAt   time.Time
+	workerScroll   int
 }
 
 func NewUI(game *GameState) (*UI, error) {
@@ -47,12 +45,25 @@ func (ui *UI) Run() error {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 
+	eventCh := make(chan tcell.Event)
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case eventCh <- ui.screen.PollEvent():
+			}
+		}
+	}()
+	defer close(done)
+
 	for {
 		ui.draw()
 		select {
 		case <-tick.C:
 			ui.game.Update(time.Now())
-		case ev := <-ui.screen.PollEvent():
+		case ev := <-eventCh:
 			switch event := ev.(type) {
 			case *tcell.EventResize:
 				ui.screen.Sync()
@@ -129,7 +140,6 @@ func (ui *UI) draw() {
 		return
 	}
 
-	ui.lastScreenWidth = width
 	ui.drawHeader(width)
 	ui.drawResources(2, 4, width)
 	ui.drawWorkers(2, 8, width, height-10)
