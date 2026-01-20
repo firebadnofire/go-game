@@ -1,0 +1,31 @@
+industry:
+  - name: Coal Production
+    resource: Coal
+    workers:
+      - workerName: Miner
+        prodRate: 1
+        prodQuant: 25
+        upgradeMult: 0.25
+      - workerName: Driller
+        prodRate: 5
+        prodQuant: 50
+        upgradeMult: 0.3
+      - workerName: Foreman
+        prodRate: 10
+        prodQuant: 200
+        upgradeMult: 0.4
+  - name: Iron Production
+    resource: Iron
+    workers:
+      - workerName: Prospector
+        prodRate: 2
+        prodQuant: 20
+        upgradeMult: 0.2
+      - workerName: Extractor
+        prodRate: 6
+        prodQuant: 60
+        upgradeMult: 0.35
+      - workerName: Supervisor
+        prodRate: 12
+        prodQuant: 180
+        upgradeMult: 0.45
