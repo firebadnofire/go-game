@@ -107,6 +107,8 @@ func (ui *UI) handleKey(event *tcell.EventKey) bool {
 		case 'm':
 			ui.game.BuyModeMax = !ui.game.BuyModeMax
 			ui.setStatus(ui.buyModeLabel())
+		case 'q':
+			ui.setStatus(ui.runLowestAvailable(time.Now()))
 		}
 	}
 
@@ -129,6 +131,20 @@ func (ui *UI) shiftWorker(delta int) {
 		return
 	}
 	ui.selectedWorker = clamp(ui.selectedWorker+delta, 0, len(workers)-1)
+}
+
+func (ui *UI) runLowestAvailable(now time.Time) string {
+	industry := ui.game.Industries[ui.activeIndustry]
+	for index, worker := range industry.Workers {
+		if worker.Auto || worker.Running {
+			continue
+		}
+		if worker.Owned == 0 {
+			continue
+		}
+		return ui.game.StartRun(ui.activeIndustry, index, now)
+	}
+	return "no manual workers available"
 }
 
 func (ui *UI) draw() {
