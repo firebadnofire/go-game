@@ -38,8 +38,16 @@ func BuildGame(cfg GameConfig) (*GameState, error) {
 	industries := make([]IndustryState, 0, len(cfg.Industries))
 	for _, industry := range cfg.Industries {
 		workers := make([]WorkerState, 0, len(industry.Workers))
-		for _, worker := range industry.Workers {
-			workers = append(workers, WorkerState{Definition: worker})
+		for index, worker := range industry.Workers {
+			owned := 0
+			if index == 0 {
+				owned = 1
+			}
+			workers = append(workers, WorkerState{
+				Definition: worker,
+				Owned:      owned,
+				Tier:       1,
+			})
 		}
 		industries = append(industries, IndustryState{
 			Key:      industry.Key,
@@ -132,12 +140,15 @@ func (g *GameState) applyProduction(industry *IndustryState, worker *WorkerState
 		return
 	}
 	produced := worker.Definition.ProdQuant * worker.Owned
-	switch worker.Definition.Produces {
-	case industry.Resource:
-		g.Resources[industry.Resource] += produced
-	default:
-		g.Resources[worker.Definition.Produces] += produced
+	if targetIndex, ok := findWorkerIndex(industry.Workers, worker.Definition.Produces); ok {
+		industry.Workers[targetIndex].Owned += produced
+		return
 	}
+	if worker.Definition.Produces == industry.Resource {
+		g.Resources[industry.Resource] += produced
+		return
+	}
+	g.Resources[worker.Definition.Produces] += produced
 }
 
 func canAfford(cost, resources map[string]int) bool {
@@ -165,15 +176,31 @@ func maxAffordable(cost, resources map[string]int) int {
 
 func scaledCost(base map[string]int, multiplier float64, tier int) map[string]int {
 	cost := make(map[string]int, len(base))
-	factor := math.Pow(multiplier, float64(tier))
+	factor := math.Pow(multiplier, float64(maxInt(tier-1, 0)))
 	for resource, amount := range base {
 		cost[resource] = int(math.Ceil(float64(amount) * factor))
 	}
 	return cost
 }
 
+func findWorkerIndex(workers []WorkerState, key string) (int, bool) {
+	for index, worker := range workers {
+		if worker.Definition.Key == key {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
 func minInt(a, b int) int {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b
