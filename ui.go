@@ -245,7 +245,7 @@ func (ui *UI) drawWorkers(x, y, width, height int) {
 }
 
 func (ui *UI) drawFooter(x, y, width int) {
-	controls := "a/d or ←/→ switch industry | w/s or ↑/↓ select worker | b buy | r run | u upgrade | m toggle buy mode | esc quit"
+	controls := "a/d or ←/→ switch industry | w/s or ↑/↓ select worker | b buy | r run | q global run | u upgrade | m toggle buy mode | esc quit"
 	ui.drawText(x, y, truncate(controls, width-x-2), tcell.StyleDefault)
 	status := ui.statusMessage
 	if time.Since(ui.lastStatusAt) > 5*time.Second {
