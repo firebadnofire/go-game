@@ -11,6 +11,7 @@ type GameState struct {
 	Industries []IndustryState
 	Resources  map[string]int
 	BuyModeMax bool
+	DevMode    bool
 }
 
 type IndustryState struct {
@@ -106,7 +107,14 @@ func (g *GameState) BuyWorker(industryIndex, workerIndex int) string {
 	worker := &g.Industries[industryIndex].Workers[workerIndex]
 	cost := worker.Definition.Cost
 	count := 1
-	if g.BuyModeMax {
+	if g.DevMode {
+		if g.BuyModeMax {
+			count = maxAffordable(cost, g.Resources)
+			if count < 1 {
+				count = 1
+			}
+		}
+	} else if g.BuyModeMax {
 		count = maxAffordable(cost, g.Resources)
 	} else if !canAfford(cost, g.Resources) {
 		return "cannot afford"
@@ -114,8 +122,10 @@ func (g *GameState) BuyWorker(industryIndex, workerIndex int) string {
 	if count <= 0 {
 		return "cannot afford"
 	}
-	for resource, amount := range cost {
-		g.Resources[resource] -= amount * count
+	if !g.DevMode {
+		for resource, amount := range cost {
+			g.Resources[resource] -= amount * count
+		}
 	}
 	worker.Owned += count
 	return fmt.Sprintf("bought %d", count)

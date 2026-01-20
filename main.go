@@ -9,6 +9,7 @@ import (
 
 func main() {
 	configPath := flag.String("config", "config/game.yml", "path to game configuration")
+	devMode := flag.Bool("dev", false, "enable developer mode (free money mode)")
 	flag.Parse()
 
 	cfg, err := LoadConfig(*configPath)
@@ -20,6 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to build game: %v", err)
 	}
+	game.DevMode = *devMode
 
 	ui, err := NewUI(game)
 	if err != nil {
