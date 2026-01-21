@@ -9,8 +9,9 @@ import (
 )
 
 type GameConfig struct {
-	StartingResources map[string]int   `yaml:"startingResources"`
-	Industries        []IndustryConfig `yaml:"industry"`
+	StartingResources  map[string]int          `yaml:"startingResources"`
+	StartingProduction []PassiveProductionSpec `yaml:"startingProduction"`
+	Industries         []IndustryConfig        `yaml:"industry"`
 }
 
 type IndustryConfig struct {
@@ -28,7 +29,14 @@ type WorkerConfig struct {
 	ProdQuant   int            `yaml:"prodQuant"`
 	UpgradeMult float64        `yaml:"upgradeMult"`
 	AutoTier    int            `yaml:"autoTier"`
+	Level       int            `yaml:"level"`
 	Cost        map[string]int `yaml:"cost"`
+}
+
+type PassiveProductionSpec struct {
+	Resource  string        `yaml:"resource"`
+	ProdRate  time.Duration `yaml:"prodRate"`
+	ProdQuant int           `yaml:"prodQuant"`
 }
 
 func LoadConfig(path string) (GameConfig, error) {
@@ -73,9 +81,27 @@ func LoadConfig(path string) (GameConfig, error) {
 			if worker.UpgradeMult <= 0 {
 				return GameConfig{}, fmt.Errorf("industry %s worker %s missing upgradeMult", industry.Key, worker.Key)
 			}
+			if worker.Level <= 0 {
+				return GameConfig{}, fmt.Errorf("industry %s worker %s missing level", industry.Key, worker.Key)
+			}
 			if worker.Cost == nil {
 				return GameConfig{}, fmt.Errorf("industry %s worker %s missing cost", industry.Key, worker.Key)
 			}
+			worker.Cost["coins"] = worker.Level
+			industry.Workers[j] = worker
+		}
+		cfg.Industries[i] = industry
+	}
+
+	for i, production := range cfg.StartingProduction {
+		if production.Resource == "" {
+			return GameConfig{}, fmt.Errorf("starting production %d missing resource", i)
+		}
+		if production.ProdRate <= 0 {
+			return GameConfig{}, fmt.Errorf("starting production %s missing prodRate", production.Resource)
+		}
+		if production.ProdQuant <= 0 {
+			return GameConfig{}, fmt.Errorf("starting production %s missing prodQuant", production.Resource)
 		}
 	}
 
