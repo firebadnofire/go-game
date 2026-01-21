@@ -420,8 +420,18 @@ func (g *GameState) applySnapshot(snapshot saveGame) error {
 		g.Resources[key] = value
 	}
 
+	now := time.Now()
 	for index := range g.Production {
-		g.Production[index].NextAt = snapshot.Production[index].NextAt
+		savedNextAt := snapshot.Production[index].NextAt
+		if snapshot.SavedAt.IsZero() {
+			g.Production[index].NextAt = savedNextAt
+			continue
+		}
+		offset := savedNextAt.Sub(snapshot.SavedAt)
+		if offset < 0 {
+			offset = 0
+		}
+		g.Production[index].NextAt = now.Add(offset)
 	}
 
 	g.BuyModeMax = snapshot.BuyModeMax
