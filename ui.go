@@ -10,6 +10,7 @@ import (
 const (
 	minWidth  = 85
 	minHeight = 22
+	saveFile  = "savegame.json"
 )
 
 type UI struct {
@@ -109,6 +110,10 @@ func (ui *UI) handleKey(event *tcell.EventKey) bool {
 			ui.setStatus(ui.buyModeLabel())
 		case 'q':
 			ui.setStatus(ui.runLowestAvailable(time.Now()))
+		case 't':
+			ui.setStatus(ui.saveGame())
+		case 'y':
+			ui.setStatus(ui.loadGame())
 		}
 	}
 
@@ -253,7 +258,7 @@ func (ui *UI) drawWorkers(x, y, width, height int) {
 
 func (ui *UI) drawFooter(x, y, width int) {
 	controlsTop := "a/d or ←/→ switch industry | w/s or ↑/↓ select worker | b buy"
-	controlsBottom := "r run | q global run | u upgrade | m toggle buy mode | esc quit"
+	controlsBottom := "r run | q global run | u upgrade | m toggle buy mode | t save | y load | esc quit"
 	ui.drawText(x, y-1, truncate(controlsTop, width-x-2), tcell.StyleDefault)
 	ui.drawText(x, y, truncate(controlsBottom, width-x-2), tcell.StyleDefault)
 	status := ui.statusMessage
@@ -273,6 +278,23 @@ func (ui *UI) buyModeLabel() string {
 		return "buy mode: 100%"
 	}
 	return "buy mode: 1x"
+}
+
+func (ui *UI) saveGame() string {
+	if err := ui.game.SaveToFile(saveFile); err != nil {
+		return fmt.Sprintf("save failed: %v", err)
+	}
+	return fmt.Sprintf("saved to %s", saveFile)
+}
+
+func (ui *UI) loadGame() string {
+	if err := ui.game.LoadFromFile(saveFile); err != nil {
+		return fmt.Sprintf("load failed: %v", err)
+	}
+	ui.activeIndustry = clamp(ui.activeIndustry, 0, len(ui.game.Industries)-1)
+	ui.selectedWorker = 0
+	ui.workerScroll = 0
+	return fmt.Sprintf("loaded %s", saveFile)
 }
 
 func (ui *UI) drawText(x, y int, text string, style tcell.Style) {
