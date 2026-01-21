@@ -74,6 +74,10 @@ func (g *GameState) Update(now time.Time) {
 		industry := &g.Industries[industryIndex]
 		for workerIndex := range industry.Workers {
 			worker := &industry.Workers[workerIndex]
+			if worker.Auto && !worker.Running && worker.Owned > 0 {
+				worker.Running = true
+				worker.EndsAt = now.Add(worker.Definition.ProdRate)
+			}
 			if !worker.Running {
 				continue
 			}
