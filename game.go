@@ -10,6 +10,7 @@ import (
 type GameState struct {
 	Industries []IndustryState
 	Resources  map[string]int
+	Production []PassiveProductionState
 	BuyModeMax bool
 	DevMode    bool
 }
@@ -28,6 +29,11 @@ type WorkerState struct {
 	Running    bool
 	EndsAt     time.Time
 	Auto       bool
+}
+
+type PassiveProductionState struct {
+	Definition PassiveProductionSpec
+	NextAt     time.Time
 }
 
 func BuildGame(cfg GameConfig) (*GameState, error) {
@@ -65,11 +71,15 @@ func BuildGame(cfg GameConfig) (*GameState, error) {
 	return &GameState{
 		Industries: industries,
 		Resources:  resources,
+		Production: buildPassiveProduction(cfg.StartingProduction),
 		BuyModeMax: false,
 	}, nil
 }
 
 func (g *GameState) Update(now time.Time) {
+	for index := range g.Production {
+		g.Production[index].apply(now, g.Resources)
+	}
 	for industryIndex := range g.Industries {
 		industry := &g.Industries[industryIndex]
 		for workerIndex := range industry.Workers {
@@ -238,4 +248,31 @@ func (g *GameState) ResourceSummary() []string {
 		lines = append(lines, fmt.Sprintf("%s: %d", key, g.Resources[key]))
 	}
 	return lines
+}
+
+func buildPassiveProduction(definitions []PassiveProductionSpec) []PassiveProductionState {
+	if len(definitions) == 0 {
+		return nil
+	}
+	production := make([]PassiveProductionState, 0, len(definitions))
+	for _, definition := range definitions {
+		production = append(production, PassiveProductionState{
+			Definition: definition,
+			NextAt:     time.Now().Add(definition.ProdRate),
+		})
+	}
+	return production
+}
+
+func (p *PassiveProductionState) apply(now time.Time, resources map[string]int) {
+	if now.Before(p.NextAt) {
+		return
+	}
+	if p.Definition.ProdRate <= 0 || p.Definition.ProdQuant <= 0 {
+		return
+	}
+	for !now.Before(p.NextAt) {
+		resources[p.Definition.Resource] += p.Definition.ProdQuant
+		p.NextAt = p.NextAt.Add(p.Definition.ProdRate)
+	}
 }
