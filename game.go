@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"time"
 )
@@ -34,6 +36,32 @@ type WorkerState struct {
 type PassiveProductionState struct {
 	Definition PassiveProductionSpec
 	NextAt     time.Time
+}
+
+type saveGame struct {
+	Industries []saveIndustry   `json:"industries"`
+	Resources  map[string]int   `json:"resources"`
+	Production []saveProduction `json:"production"`
+	BuyModeMax bool             `json:"buyModeMax"`
+	DevMode    bool             `json:"devMode"`
+	SavedAt    time.Time        `json:"savedAt"`
+	Version    int              `json:"version"`
+}
+
+type saveIndustry struct {
+	Key     string       `json:"key"`
+	Workers []saveWorker `json:"workers"`
+}
+
+type saveWorker struct {
+	Key   string `json:"key"`
+	Owned int    `json:"owned"`
+	Tier  int    `json:"tier"`
+	Auto  bool   `json:"auto"`
+}
+
+type saveProduction struct {
+	NextAt time.Time `json:"nextAt"`
 }
 
 func BuildGame(cfg GameConfig) (*GameState, error) {
@@ -275,4 +303,138 @@ func (p *PassiveProductionState) apply(now time.Time, resources map[string]int) 
 		resources[p.Definition.Resource] += p.Definition.ProdQuant
 		p.NextAt = p.NextAt.Add(p.Definition.ProdRate)
 	}
+}
+
+func (g *GameState) SaveToFile(path string) error {
+	snapshot := g.snapshot()
+	payload, err := json.MarshalIndent(snapshot, "", "  ")
+	if err != nil {
+		return fmt.Errorf("serialize save: %w", err)
+	}
+	if err := os.WriteFile(path, payload, 0o644); err != nil {
+		return fmt.Errorf("write save: %w", err)
+	}
+	return nil
+}
+
+func (g *GameState) LoadFromFile(path string) error {
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read save: %w", err)
+	}
+	var snapshot saveGame
+	if err := json.Unmarshal(payload, &snapshot); err != nil {
+		return fmt.Errorf("parse save: %w", err)
+	}
+	if err := g.applySnapshot(snapshot); err != nil {
+		return fmt.Errorf("apply save: %w", err)
+	}
+	return nil
+}
+
+func (g *GameState) snapshot() saveGame {
+	industries := make([]saveIndustry, 0, len(g.Industries))
+	for _, industry := range g.Industries {
+		workers := make([]saveWorker, 0, len(industry.Workers))
+		for _, worker := range industry.Workers {
+			workers = append(workers, saveWorker{
+				Key:   worker.Definition.Key,
+				Owned: worker.Owned,
+				Tier:  worker.Tier,
+				Auto:  worker.Auto,
+			})
+		}
+		industries = append(industries, saveIndustry{
+			Key:     industry.Key,
+			Workers: workers,
+		})
+	}
+
+	production := make([]saveProduction, 0, len(g.Production))
+	for _, entry := range g.Production {
+		production = append(production, saveProduction{
+			NextAt: entry.NextAt,
+		})
+	}
+
+	resources := make(map[string]int, len(g.Resources))
+	for key, value := range g.Resources {
+		resources[key] = value
+	}
+
+	return saveGame{
+		Industries: industries,
+		Resources:  resources,
+		Production: production,
+		BuyModeMax: g.BuyModeMax,
+		DevMode:    g.DevMode,
+		SavedAt:    time.Now(),
+		Version:    1,
+	}
+}
+
+func (g *GameState) applySnapshot(snapshot saveGame) error {
+	if snapshot.Resources == nil {
+		return fmt.Errorf("save missing resources")
+	}
+	if len(snapshot.Industries) != len(g.Industries) {
+		return fmt.Errorf("save industries mismatch")
+	}
+	if len(snapshot.Production) != len(g.Production) {
+		return fmt.Errorf("save production mismatch")
+	}
+
+	industryLookup := make(map[string]saveIndustry, len(snapshot.Industries))
+	for _, industry := range snapshot.Industries {
+		industryLookup[industry.Key] = industry
+	}
+
+	for industryIndex := range g.Industries {
+		industry := &g.Industries[industryIndex]
+		savedIndustry, ok := industryLookup[industry.Key]
+		if !ok {
+			return fmt.Errorf("save missing industry %s", industry.Key)
+		}
+
+		workerLookup := make(map[string]saveWorker, len(savedIndustry.Workers))
+		for _, worker := range savedIndustry.Workers {
+			workerLookup[worker.Key] = worker
+		}
+
+		for workerIndex := range industry.Workers {
+			worker := &industry.Workers[workerIndex]
+			savedWorker, ok := workerLookup[worker.Definition.Key]
+			if !ok {
+				return fmt.Errorf("save missing worker %s", worker.Definition.Key)
+			}
+			worker.Owned = savedWorker.Owned
+			worker.Tier = savedWorker.Tier
+			worker.Auto = savedWorker.Auto || (worker.Definition.AutoTier > 0 && savedWorker.Tier >= worker.Definition.AutoTier)
+			worker.Running = false
+			worker.EndsAt = time.Time{}
+		}
+	}
+
+	g.Resources = make(map[string]int, len(snapshot.Resources))
+	for key, value := range snapshot.Resources {
+		g.Resources[key] = value
+	}
+
+	now := time.Now()
+	for index := range g.Production {
+		savedNextAt := snapshot.Production[index].NextAt
+		if snapshot.SavedAt.IsZero() {
+			g.Production[index].NextAt = savedNextAt
+			continue
+		}
+		offset := savedNextAt.Sub(snapshot.SavedAt)
+		if offset < 0 {
+			offset = 0
+		}
+		g.Production[index].NextAt = now.Add(offset)
+	}
+
+	g.BuyModeMax = snapshot.BuyModeMax
+	g.DevMode = snapshot.DevMode
+	return nil
 }
