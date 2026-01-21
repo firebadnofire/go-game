@@ -171,6 +171,13 @@ func (ui *UI) drawTooSmall(width, height int) {
 
 func (ui *UI) drawHeader(width int) {
 	ui.drawText(2, 1, "Go Game - Industry Ladder", tcell.StyleDefault.Bold(true))
+	if ui.game.DevMode {
+		label := "developer mode"
+		startX := width - len(label) - 2
+		if startX > 2 {
+			ui.drawText(startX, 1, label, tcell.StyleDefault.Bold(true))
+		}
+	}
 
 	industryLabels := make([]string, 0, len(ui.game.Industries))
 	for _, industry := range ui.game.Industries {
