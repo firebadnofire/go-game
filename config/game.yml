@@ -1,5 +1,5 @@
 startingResources:
-  coins: 200
+  coins: 0
 startingProduction:
   - resource: coins
     prodRate: 1s
