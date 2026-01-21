@@ -111,9 +111,9 @@ func (ui *UI) handleKey(event *tcell.EventKey) bool {
 		case 'q':
 			ui.setStatus(ui.runLowestAvailable(time.Now()))
 		case 't':
-			ui.setStatus(ui.saveGame())
+			ui.setStatus(ui.guardDevMode("save", ui.saveGame))
 		case 'y':
-			ui.setStatus(ui.loadGame())
+			ui.setStatus(ui.guardDevMode("load", ui.loadGame))
 		}
 	}
 
@@ -278,6 +278,13 @@ func (ui *UI) buyModeLabel() string {
 		return "buy mode: 100%"
 	}
 	return "buy mode: 1x"
+}
+
+func (ui *UI) guardDevMode(action string, fn func() string) string {
+	if ui.game.DevMode {
+		return fmt.Sprintf("%s disabled in developer mode", action)
+	}
+	return fn()
 }
 
 func (ui *UI) saveGame() string {
